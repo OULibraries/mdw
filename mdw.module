@@ -1,0 +1,62 @@
+<?php
+
+
+function mdw_form_alter(&$form, $form_state, $form_id) {
+    if($form_id == 'transcription_node_form'){
+
+      dpm(time());
+
+      $targetImg = "";
+      $thisNode = menu_get_object();
+
+      //We're only stepping in if this is called from an Image node
+      if ( (! is_null($thisNode))
+      	   && property_exists( $thisNode, "type")
+      	   && 0== strcmp($thisNode->type, "image" )) {
+
+
+	// Find the image that this image is a transcription of
+      	$targetImg=$thisNode;
+      
+	/* pre-set and hide these */
+	$form['title']['#value'] = "Transcript of ".$targetImg->title;
+	$form['title']['#type'] = 'value';
+	$form['title']['#required'] = FALSE;
+	
+	
+	$form['field_image_reference']['und'][0]['nid']['#value'] = $targetImg->title; 
+	// I would way rather set this by nid than node title, but this seems to work. 
+	$form['field_image_reference']['#type'] = 'value';
+	$form['field_image_reference']['#required'] = FALSE;
+      }
+    }
+  }
+
+
+
+
+function mdw_countTranscriptions($imageNid) {
+
+  $query = new EntityFieldQuery();
+  $result = $query
+    ->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'transcription')
+    ->fieldCondition('field_image_reference', 'nid', $imageNid, '=') 
+    ->execute();
+  if( count($result) > 0) {
+      return count($result['node']);
+  } else {
+    return 0;
+  }
+}
+
+function mdw_countTranscriptionsThisNode() {
+  $thisNode = menu_get_object();
+  if ( (! is_null($thisNode)) 
+       && Property_exists( $thisNode, "type") 
+       && 0== strcmp($thisNode->type, "image" )) {
+    return  mdw_countTranscriptions($thisNode->nid);
+  } else {
+    return 0;
+  }
+}

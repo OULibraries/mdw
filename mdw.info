@@ -1,0 +1,5 @@
+name = MDW Custom Code
+description = Provides MDW customizations
+core = 7.x
+Package = MDW
+dependencies[] = afb
