@@ -1,50 +1,87 @@
 <?php
 
+function mdw_block_info(){
+  $blocks['mdw_block'] = array(
+			      'info' => t('MDW transcription form block'),
+			      'cache' => DRUPAL_CACHE_PER_PAGE,
+			      );
+  return $blocks;
+}
+
+
+function mdw_block_view($delta) {
+  switch ($delta) {
+    case 'mdw_block' :
+
+      if( mdw_countTranscriptionsThisNode() > 2) {
+
+        $block['subject'] = t('This image is closed for transcription' );
+        $block['content'] = t('Multiple transcriptions have already been submitted for this image. Please choose another to transcribe.');
+        
+      } else {
+
+        module_load_include('inc', 'node', 'node.pages');
+        $form = node_add('transcription');
+        $block = array('subject' => t('') , 'content' => drupal_render($form));
+
+      }
+      return $block;
+  }
+}
+
+
+function mdw_after_build($form, &$form_state) {
+  /* remove these after the form gets build because some of them
+     might not be added yet if we do it in form alter */
+
+  $form['options']['#access'] = FALSE; 
+  $form['author']['#access'] = FALSE; 
+  $form['comment_settings']['#access'] = FALSE;
+  $form['revision_information']['#access'] = FALSE;
+  $form['menu']['#access'] = FALSE;
+  $form['path']['#access'] = FALSE;
+
+  return $form;
+}
 
 function mdw_form_alter(&$form, $form_state, $form_id) {
-    if($form_id == 'transcription_node_form'){
-
-      dpm(time());
-
-      $targetImg = "";
-      $thisNode = menu_get_object();
-
-      //We're only stepping in if this is called from an Image node
-      if ( (! is_null($thisNode))
-      	   && property_exists( $thisNode, "type")
-      	   && 0== strcmp($thisNode->type, "image" )) {
-
-
-	// Find the image that this image is a transcription of
-      	$targetImg=$thisNode;
+  if($form_id == 'transcription_node_form'){
+    $targetImg = "";
+    $thisNode = menu_get_object();
+    //We're only stepping in if this is called from an Image node
+    if ( (! is_null($thisNode))
+      && property_exists( $thisNode, "type")
+      && 0== strcmp($thisNode->type, "image" )) {
+      // Find the image that this is a transcription of
+      $targetImg=$thisNode;
       
-	/* pre-set and hide these */
-	$form['title']['#value'] = "Transcript of ".$targetImg->title;
-	$form['title']['#type'] = 'value';
-	$form['title']['#required'] = FALSE;
-	
-	
-	$form['field_image_reference']['und'][0]['nid']['#value'] = $targetImg->title; 
-	// I would way rather set this by nid than node title, but this seems to work. 
-	$form['field_image_reference']['#type'] = 'value';
-	$form['field_image_reference']['#required'] = FALSE;
-      }
+      /* pre-set and hide these */
+      $form['title']['#value'] = "Transcript of ".$targetImg->title;
+      $form['title']['#type'] = 'hidden';
+
+      $form['field_image_reference']['und'][0]['nid']['#value'] = $targetImg->title;
+      // I would way rather set this by nid than node title, but this seems to work.
+      $form['field_image_reference']['#type'] = 'hidden';
+      $form['field_image_reference']['#required'] = FALSE;
+
+      $form['#after_build'][] = 'mdw_after_build';
+
     }
   }
+}
 
 
 
 
 function mdw_countTranscriptions($imageNid) {
-
   $query = new EntityFieldQuery();
   $result = $query
     ->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', 'transcription')
-    ->fieldCondition('field_image_reference', 'nid', $imageNid, '=') 
+    ->fieldCondition('field_image_reference', 'nid', $imageNid, '=')
     ->execute();
   if( count($result) > 0) {
-      return count($result['node']);
+    return count($result['node']);
   } else {
     return 0;
   }
@@ -52,11 +89,13 @@ function mdw_countTranscriptions($imageNid) {
 
 function mdw_countTranscriptionsThisNode() {
   $thisNode = menu_get_object();
-  if ( (! is_null($thisNode)) 
-       && Property_exists( $thisNode, "type") 
+  if ( (! is_null($thisNode))
+       && property_exists( $thisNode, "type")
        && 0== strcmp($thisNode->type, "image" )) {
     return  mdw_countTranscriptions($thisNode->nid);
   } else {
     return 0;
   }
 }
+
+
