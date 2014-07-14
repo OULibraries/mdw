@@ -3,7 +3,7 @@
 function mdw_block_info(){
   $blocks['mdw_block'] = array(
 			      'info' => t('MDW transcription form block'),
-			      'cache' => DRUPAL_CACHE_PER_PAGE,
+			      'cache' => DRUPAL_NO_CACHE,
 			      );
   return $blocks;
 }
@@ -12,20 +12,20 @@ function mdw_block_info(){
 function mdw_block_view($delta) {
   switch ($delta) {
     case 'mdw_block' :
+    $transCount = mdw_countTranscriptionsThisNode();
 
-      if( mdw_countTranscriptionsThisNode() > 2) {
-
+    if(! user_is_logged_in() ) {
+        $block['subject'] = t('You must be logged in to create transcriptions' );
+        $block['content'] = t('Please click "Log in" above to log in or create an account.');
+    } else if( $transCount  >= 2){
         $block['subject'] = t('This image is closed for transcription' );
         $block['content'] = t('Multiple transcriptions have already been submitted for this image. Please choose another to transcribe.');
-        
-      } else {
-
+    } else {
         module_load_include('inc', 'node', 'node.pages');
         $form = node_add('transcription');
         $block = array('subject' => t('') , 'content' => drupal_render($form));
-
-      }
-      return $block;
+    }
+    return $block;
   }
 }
 
@@ -76,6 +76,7 @@ function mdw_form_alter(&$form, $form_state, $form_id) {
 function mdw_countTranscriptions($imageNid) {
   $query = new EntityFieldQuery();
   $result = $query
+    ->addMetaData('account', user_load(1))
     ->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', 'transcription')
     ->fieldCondition('field_image_reference', 'nid', $imageNid, '=')
@@ -94,7 +95,7 @@ function mdw_countTranscriptionsThisNode() {
        && 0== strcmp($thisNode->type, "image" )) {
     return  mdw_countTranscriptions($thisNode->nid);
   } else {
-    return 0;
+    return -1;
   }
 }
 
