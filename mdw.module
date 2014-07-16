@@ -55,17 +55,13 @@ function mdw_form_alter(&$form, $form_state, $form_id) {
       // Find the image that this is a transcription of
       $targetImg=$thisNode;
       
-      /* pre-set and hide these */
+      /* pre-set and hide the title and node reference*/
       $form['title']['#value'] = "Transcript of ".$targetImg->title;
       $form['title']['#type'] = 'hidden';
-
-      $form['field_image_reference']['und'][0]['nid']['#value'] = $targetImg->title;
-      // I would way rather set this by nid than node title, but this seems to work.
-      $form['field_image_reference']['#type'] = 'hidden';
-      $form['field_image_reference']['#required'] = FALSE;
+      $form['field_image_reference']['und']['#value']= $targetImg->nid ;
+      $form['field_image_reference']['und']['#type']= 'hidden';
 
       $form['#after_build'][] = 'mdw_after_build';
-
     }
   }
 }
